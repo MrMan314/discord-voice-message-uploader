@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 		.text()
 		.await?;
 
-    let resp = client.post(format!("https://discord.com/api/v9/channels/{}/messages", chan))
+	let resp = client.post(format!("https://discord.com/api/v9/channels/{}/messages", chan))
 		.header(ACCEPT, "*/*")
 		.header(AUTHORIZATION, &token)
 		.header(CONTENT_TYPE, "application/json")
