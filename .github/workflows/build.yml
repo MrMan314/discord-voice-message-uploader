@@ -16,6 +16,8 @@ jobs:
           pkg-config glib-2.0 --modversion
           pkg-config glib-2.0 --libs --cflags
           cat /usr/lib/x86_64-linux-gnu/pkgconfig/glib-2.0.pc
+          mkdir -p /usr/lib/pkgconfig
+          cp /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/pkgconfig/
           cat /usr/lib/pkgconfig/glib-2.0.pc
 
       - uses: actions/checkout@master
