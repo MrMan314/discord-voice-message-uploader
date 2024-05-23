@@ -2,6 +2,7 @@ use gtk4 as gtk;
 use gtk::{
 	prelude::*,
 	glib,
+	glib::clone,
 	FileDialog,
 	Application,
 	ApplicationWindow,
@@ -9,6 +10,10 @@ use gtk::{
 		Center,
 		Start
 	}
+};
+use std::{
+	thread,
+	time::Duration
 };
 mod messenger;
 
@@ -83,15 +88,32 @@ async fn main() -> glib::ExitCode {
 
 		container.append(&file_selector);
 
+		let (sender, receiver) = async_channel::bounded(1);
+
 		let run_button = gtk::Button::with_label("Upload!");
-		run_button.connect_clicked(glib::clone!(@weak token_field, @weak channel_field, @weak path_field => move |_| {
-			println!("asdfasdfa");
-/*			match messenger::message(token_field.text().as_str().to_string(), channel_field.text().as_str().to_string(), path_field.text().as_str().to_string()).await {
-				Err(error) => {
-					println!("{}", error);
-				}
-			};*/
+		run_button.connect_clicked(move |_| {
+			let sender = sender.clone();
+			glib::spawn_future_local(clone!(@strong sender, @weak channel_field, @weak token_field, @weak path_field => async move {
+				sender
+					.send_blocking(false)
+					.expect("Channel is not open.");
+				messenger::message(
+					token_field.text().as_str().to_string(),
+					channel_field.text().as_str().to_string(),
+					path_field.text().as_str().to_string()
+				).await;
+				sender
+					.send_blocking(true)
+					.expect("Channel is not open.");
+			}));
+		});
+
+		glib::spawn_future_local(clone!(@weak run_button => async move {
+			while let Ok(enable_button) = receiver.recv().await {
+				run_button.set_sensitive(enable_button);
+			}
 		}));
+
 		container.append(&run_button);
 
 		window.set_child(Some(&container));
