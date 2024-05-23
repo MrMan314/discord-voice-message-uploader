@@ -36,11 +36,9 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 
 	let client = Client::new();
 
-	println!("{} {} {}", token, chan, file_name);
-
 	println!("{} Sending attachment request...", style("[1/3]").bold().dim());
 
-	let resp = client.post(format!("http://localhost:5231/api/v9/channels/{}/attachments", chan))
+	let resp = client.post(format!("https://discord.com/api/v9/channels/{}/attachments", chan))
 		.header(ACCEPT, "*/*")
 		.header(AUTHORIZATION, &token)
 		.header(CONTENT_TYPE, "application/json")
@@ -51,7 +49,6 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 		.await?;
 
 	let data: Value = serde_json::from_str(&resp)?;
-	println!("{}", data);
 	let upload_url:			&str = data["attachments"][0]["upload_url"].as_str().unwrap();
 	let upload_filename:	&str = data["attachments"][0]["upload_filename"].as_str().unwrap();
 	
