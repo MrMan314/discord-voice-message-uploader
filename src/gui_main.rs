@@ -10,6 +10,7 @@ use gtk::{
 		Start
 	}
 };
+mod messenger;
 
 #[tokio::main]
 async fn main() -> glib::ExitCode {
@@ -83,6 +84,14 @@ async fn main() -> glib::ExitCode {
 		container.append(&file_selector);
 
 		let run_button = gtk::Button::with_label("Upload!");
+		run_button.connect_clicked(glib::clone!(@weak token_field, @weak channel_field, @weak path_field => move |_| {
+			println!("asdfasdfa");
+/*			match messenger::message(token_field.text().as_str().to_string(), channel_field.text().as_str().to_string(), path_field.text().as_str().to_string()).await {
+				Err(error) => {
+					println!("{}", error);
+				}
+			};*/
+		}));
 		container.append(&run_button);
 
 		window.set_child(Some(&container));
