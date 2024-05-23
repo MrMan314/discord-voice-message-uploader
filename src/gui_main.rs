@@ -7,7 +7,8 @@ use gtk::{
 	Button
 };
 
-fn main() -> glib::ExitCode {
+#[tokio::main]
+async fn main() -> glib::ExitCode {
 	let app = Application::builder()
 		.application_id("tech.mrman314.voicemessagecord")
 		.build();

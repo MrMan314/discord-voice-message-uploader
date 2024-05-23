@@ -1,7 +1,9 @@
 use std::{
 	fs,
 	error::Error,
-	path::Path
+	path::Path,
+	cmp::min,
+	fmt::Write
 };
 use reqwest::{
 	Client,
@@ -16,11 +18,20 @@ use lofty::{
 	probe::Probe,
 	file::AudioFile
 };
+use async_stream::stream;
+use tokio_util::io::ReaderStream;
+use futures_util::StreamExt;
+use indicatif::{
+	ProgressBar,
+	ProgressState,
+	ProgressStyle
+};
 
-pub async fn message(token: String, chan: String, file: String) -> Result<(), Box<dyn Error>> {
-	let size = fs::metadata(&file)?.len();
-	let file_buffer: Vec<u8> = fs::read(&file)?;
-	let audio_file = Probe::open(Path::new(&file))?.read()?;
+pub async fn message(token: String, chan: String, file_name: String) -> Result<(), Box<dyn Error>> {
+	let file = tokio::fs::File::open(&file_name).await.unwrap();
+	let size = file.metadata().await.unwrap().len();
+	let audio_file = Probe::open(Path::new(&file_name))?.read()?;
+	let mut reader_stream: ReaderStream<tokio::fs::File> = ReaderStream::new(file);
 
 	let client = Client::new();
 
@@ -37,9 +48,28 @@ pub async fn message(token: String, chan: String, file: String) -> Result<(), Bo
 	let data: Value = serde_json::from_str(&resp)?;
 	let upload_url:			&str = data["attachments"][0]["upload_url"].as_str().unwrap();
 	let upload_filename:	&str = data["attachments"][0]["upload_filename"].as_str().unwrap();
+	
+	let mut uploaded = 0;
+
+	let bar = ProgressBar::new(size);
+	bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+		.unwrap()
+		.with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+		.progress_chars("#>-"));
+
+	let async_stream = stream! {
+		while let Some(chunk) = reader_stream.next().await {
+			if let Ok(chunk) = &chunk {
+				let new = min(uploaded + (chunk.len() as u64), size);
+				uploaded = new;
+				bar.set_position(new);
+			}
+			yield chunk;
+		}
+	};
 
 	let resp = client.put(upload_url)
-		.body(file_buffer)
+		.body(reqwest::Body::wrap_stream(async_stream))
 		.send()
 		.await?
 		.text()
@@ -55,8 +85,6 @@ pub async fn message(token: String, chan: String, file: String) -> Result<(), Bo
 		.await?
 		.text()
 		.await?;
-
-	println!("{}", resp);
 
 	Ok(())
 }
