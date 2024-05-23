@@ -1,2 +1,1 @@
-# hijack-discord-voice-messages
-(WIP) test hijack discord voice messages
+# Discord voice message uploader
