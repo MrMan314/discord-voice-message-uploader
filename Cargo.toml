@@ -1,5 +1,5 @@
 [package]
-name = "hijack-discord-voice-messages"
+name = "discord-voice-message-uploader"
 version = "0.1.0"
 edition = "2021"
 
