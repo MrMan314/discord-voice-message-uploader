@@ -50,9 +50,9 @@ async fn main() -> glib::ExitCode {
 		container.append(&title);
 
 		let channel_field = gtk::Entry::builder()
-			.input_purpose(gtk::InputPurpose::Digits)
 			.placeholder_text("Channel ID")
 			.build();
+		channel_field.set_input_purpose(gtk::InputPurpose::Digits);
 		container.append(&channel_field);
 
 		let token_field = gtk::PasswordEntry::builder()
