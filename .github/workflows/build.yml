@@ -8,6 +8,10 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+	strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-unknown-linux-musl, x86_64-pc-windows-gnu, x86_64-apple-darwin]
     steps:
       - name: Install dependencies
         run: |
@@ -16,13 +20,12 @@ jobs:
           sudo mkdir -p /usr/lib/pkgconfig
           sudo cp /usr/lib/x86_64-linux-gnu/pkgconfig/* /usr/lib/pkgconfig/
           cat /usr/lib/pkgconfig/glib-2.0.pc
-
       - uses: actions/checkout@master
       - name: Compile
         id: compile
         uses: rust-build/rust-build.action@v1.4.5
         with:
-          RUSTTARGET: x86_64-unknown-linux-musl
+          RUSTTARGET: ${{ matrix.target }}
           UPLOAD_MODE: none
       - name: Upload artifact
         uses: actions/upload-artifact@v3
