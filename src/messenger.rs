@@ -26,14 +26,17 @@ use indicatif::{
 	ProgressState,
 	ProgressStyle
 };
+use console::style;
 
 pub async fn message(token: String, chan: String, file_name: String) -> Result<(), Box<dyn Error>> {
-	let file = tokio::fs::File::open(&file_name).await.unwrap();
+	let file = tokio::fs::File::open(&file_name).await?;
 	let size = file.metadata().await.unwrap().len();
 	let audio_file = Probe::open(Path::new(&file_name))?.read()?;
 	let mut reader_stream: ReaderStream<tokio::fs::File> = ReaderStream::new(file);
 
 	let client = Client::new();
+
+	println!("{} Sending attachment request...", style("[1/3]").bold().dim());
 
 	let resp = client.post(format!("https://discord.com/api/v9/channels/{}/attachments", chan))
 		.header(ACCEPT, "*/*")
@@ -46,10 +49,11 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 		.await?;
 
 	let data: Value = serde_json::from_str(&resp)?;
+	if data["attachments"][0]["upload_url"].as_str() == None {
+		Err(data["message"].as_str().unwrap())?;
+	}
 	let upload_url:			&str = data["attachments"][0]["upload_url"].as_str().unwrap();
 	let upload_filename:	&str = data["attachments"][0]["upload_filename"].as_str().unwrap();
-	
-	let mut uploaded = 0;
 
 	let bar = ProgressBar::new(size);
 	bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
@@ -58,6 +62,7 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 		.progress_chars("#>-"));
 
 	let async_stream = stream! {
+		let mut uploaded = 0;
 		while let Some(chunk) = reader_stream.next().await {
 			if let Ok(chunk) = &chunk {
 				let new = min(uploaded + (chunk.len() as u64), size);
@@ -68,12 +73,16 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 		}
 	};
 
+	println!("{} Uploading file...", style("[2/3]").bold().dim());
+
 	let resp = client.put(upload_url)
 		.body(reqwest::Body::wrap_stream(async_stream))
 		.send()
 		.await?
 		.text()
 		.await?;
+
+	println!("{} Sending message...", style("[3/3]").bold().dim());
 
 	let resp = client.post(format!("https://discord.com/api/v9/channels/{}/messages", chan))
 		.header(ACCEPT, "*/*")
@@ -85,6 +94,8 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 		.await?
 		.text()
 		.await?;
+
+	println!("Done!");
 
 	Ok(())
 }
