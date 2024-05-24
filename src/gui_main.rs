@@ -97,11 +97,14 @@ async fn main() -> glib::ExitCode {
 				sender
 					.send_blocking(false)
 					.expect("Channel is not open.");
-				messenger::message(
+				match messenger::message(
 					token_field.text().as_str().to_string(),
 					channel_field.text().as_str().to_string(),
 					path_field.text().as_str().to_string()
-				).await;
+				).await {
+					Ok(()) => println!("OK"),
+					Err(error) => println!("{}", error)
+				};
 				sender
 					.send_blocking(true)
 					.expect("Channel is not open.");
