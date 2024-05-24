@@ -50,11 +50,12 @@ async fn main() -> glib::ExitCode {
 		container.append(&title);
 
 		let channel_field = gtk::Entry::builder()
+			.input_purpose(gtk::InputPurpose::Digits)
 			.placeholder_text("Channel ID")
 			.build();
 		container.append(&channel_field);
 
-		let token_field = gtk::Entry::builder()
+		let token_field = gtk::PasswordEntry::builder()
 			.placeholder_text("Token")
 			.build();
 		container.append(&token_field);
@@ -94,14 +95,13 @@ async fn main() -> glib::ExitCode {
 		run_button.connect_clicked(move |_| {
 			let sender = sender.clone();
 			glib::spawn_future_local(clone!(@strong sender, @weak channel_field, @weak token_field, @weak path_field => async move {
+				let token = token_field.text().as_str().to_string();
+				let channel = channel_field.text().as_str().to_string();
+				let path = path_field.text().as_str().to_string();
 				sender
 					.send_blocking(false)
 					.expect("Channel is not open.");
-				match messenger::message(
-					token_field.text().as_str().to_string(),
-					channel_field.text().as_str().to_string(),
-					path_field.text().as_str().to_string()
-				).await {
+				match messenger::message(token, channel, path).await {
 					Ok(()) => println!("OK"),
 					Err(error) => println!("{}", error)
 				};
