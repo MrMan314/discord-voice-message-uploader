@@ -27,6 +27,10 @@ use indicatif::{
 	ProgressStyle
 };
 use console::style;
+use rand::Rng;
+
+const B64SET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const WAVEFORM_LEN: usize = 64;
 
 pub async fn message(token: String, chan: String, file_name: String) -> Result<(), Box<dyn Error>> {
 	let file = tokio::fs::File::open(&file_name).await?;
@@ -84,12 +88,19 @@ pub async fn message(token: String, chan: String, file_name: String) -> Result<(
 
 	println!("{} Sending message...", style("[3/3]").bold().dim());
 
+	let mut rng = rand::thread_rng();
+	let waveform: String = (0..WAVEFORM_LEN)
+		.map(|_| {
+			B64SET[rng.gen_range(0..B64SET.len())] as char
+		})
+		.collect();
+
 	let resp = client.post(format!("https://discord.com/api/v9/channels/{}/messages", chan))
 		.header(ACCEPT, "*/*")
 		.header(AUTHORIZATION, &token)
 		.header(CONTENT_TYPE, "application/json")
 		.header("X-Super-Properties", "eyJvcyI6ImlPUyIsImJyb3dzZXIiOiJEaXNjb3JkIGlPUyIsImRldmljZSI6ImlQaG9uZTksMyIsInN5c3RlbV9sb2NhbGUiOiJlbi1DQSIsImNsaWVudF92ZXJzaW9uIjoiMTcyLjAiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJicm93c2VyX3VzZXJfYWdlbnQiOiIiLCJicm93c2VyX3ZlcnNpb24iOiIiLCJvc192ZXJzaW9uIjoiMTUuNSIsImNsaWVudF9idWlsZF9udW1iZXIiOjQyNjU2LCJjbGllbnRfZXZlbnRfc291cmNlIjpudWxsLCJkZXNpZ25faWQiOjB9")
-		.body(format!("{{\"content\":\"\",\"channel_id\":\"{}\",\"type\":0,\"flags\":8192,\"attachments\":[{{\"id\":\"0\",\"filename\":\"voice-message.ogg\",\"uploaded_filename\":\"{}\",\"duration_secs\":{},\"waveform\":\"////\"}}]}}", chan, upload_filename, audio_file.properties().duration().as_secs()))
+		.body(format!("{{\"content\":\"\",\"channel_id\":\"{}\",\"type\":0,\"flags\":8192,\"attachments\":[{{\"id\":\"0\",\"filename\":\"voice-message.ogg\",\"uploaded_filename\":\"{}\",\"duration_secs\":{},\"waveform\":\"{}\"}}]}}", chan, upload_filename, audio_file.properties().duration().as_secs(), waveform))
 		.send()
 		.await?
 		.text()

@@ -95,9 +95,9 @@ async fn main() -> glib::ExitCode {
 		run_button.connect_clicked(move |_| {
 			let sender = sender.clone();
 			glib::spawn_future_local(clone!(@strong sender, @weak channel_field, @weak token_field, @weak path_field => async move {
-				let token = token_field.text().as_str().to_string();
-				let channel = channel_field.text().as_str().to_string();
-				let path = path_field.text().as_str().to_string();
+				let mut token = token_field.text().as_str().to_string();
+				let mut channel = channel_field.text().as_str().to_string();
+				let mut path = path_field.text().as_str().to_string();
 				sender
 					.send_blocking(false)
 					.expect("Channel is not open.");
